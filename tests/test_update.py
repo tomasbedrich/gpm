@@ -1,19 +1,18 @@
 """Tests for the GPM update entity."""
 
 import pytest
-
-from homeassistant.components.gpm._manager import (
+from custom_components.gpm._manager import (
     IntegrationRepositoryManager,
     RepositoryManager,
     ResourceRepositoryManager,
 )
-from homeassistant.components.gpm.const import GIT_SHORT_HASH_LEN
-from homeassistant.components.gpm.update import GPMUpdateEntity, UpdateStrategy
+from custom_components.gpm.const import GIT_SHORT_HASH_LEN
+from custom_components.gpm.update import GPMUpdateEntity, UpdateStrategy
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-
-from tests.common import MockConfigEntry
 
 
 async def test_async_setup_entry(

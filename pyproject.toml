@@ -1,8 +1,76 @@
 # The contents of this file is based on https://github.com/home-assistant/core/blob/dev/pyproject.toml
 
-target-version = "py313"
+[build-system]
+requires = ["setuptools==75.1.0"]
+build-backend = "setuptools.build_meta"
 
-[lint]
+[project]
+name        = "gpm"
+version     = "0.0.0"
+license     = {text = "MIT"}
+description = "GIT Package Manager for Home Assistant."
+readme      = "README.md"
+authors     = [
+    {name = "Tomas Bedrich", email = "ja@tbedrich.cz"}
+]
+keywords    = ["home", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Home Automation",
+]
+requires-python = ">=3.12.0"
+dependencies    = [
+    "GitPython~=3.1.43",
+    "colorlog==6.9.0",
+    "homeassistant==2024.12.0",
+    "pip>=21.3.1",
+    "ruff==0.8.4",
+    "pytest-homeassistant-custom-component~=0.13",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["custom_components.gpm"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+norecursedirs = [
+    ".git",
+    "testing_config",
+]
+log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(threadName)s %(name)s:%(filename)s:%(lineno)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.report]
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # TYPE_CHECKING and @overload blocks are never executed during pytest run
+    "if TYPE_CHECKING:",
+    "@overload",
+]
+
+[tool.ruff]
+required-version = ">=0.8.0"
+
+[tool.ruff.lint]
 select = [
     "A001", # Variable {name} is shadowing a Python builtin
     "ASYNC210", # Async functions should not call blocking HTTP methods
@@ -144,12 +212,15 @@ ignore = [
     "PLE0605"
 ]
 
-[lint.flake8-pytest-style]
+[tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
 
-[lint.pyupgrade]
+[tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
 
-[lint.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 25
+
+[tool.ruff.lint.pydocstyle]
+property-decorators = ["propcache.cached_property"]

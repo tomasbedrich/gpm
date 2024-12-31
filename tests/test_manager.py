@@ -6,10 +6,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from git import Git, GitCommandError, Repo
-
-from homeassistant.components.gpm import ResourceRepositoryManager
-from homeassistant.components.gpm._manager import (
+from custom_components.gpm import ResourceRepositoryManager
+from custom_components.gpm._manager import (
     LOVELACE_DOMAIN,
     AlreadyClonedError,
     AlreadyInstalledError,
@@ -27,10 +25,13 @@ from homeassistant.components.gpm._manager import (
     async_download,
     async_open,
 )
+from git import Git, GitCommandError, Repo
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
+)
+
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
-
-from tests.test_util.aiohttp import AiohttpClientMocker
 
 
 async def test_is_cloned(manager: RepositoryManager) -> None:
@@ -193,9 +194,7 @@ async def test_download_resource_error(
     await resource_manager.clone()
     await resource_manager.install()
     with (
-        patch(
-            "homeassistant.components.gpm._manager.async_download", side_effect=OSError
-        ),
+        patch("custom_components.gpm._manager.async_download", side_effect=OSError),
         pytest.raises(ResourceInstallError),
     ):
         await resource_manager._download_resource()

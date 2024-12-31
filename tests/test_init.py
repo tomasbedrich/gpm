@@ -4,14 +4,13 @@ import logging
 import re
 
 import pytest
+from custom_components.gpm import RepositoryType
+from custom_components.gpm._manager import IntegrationRepositoryManager
+from custom_components.gpm.const import CONF_UPDATE_STRATEGY, DOMAIN
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from homeassistant.components.gpm import RepositoryType
-from homeassistant.components.gpm._manager import IntegrationRepositoryManager
-from homeassistant.components.gpm.const import CONF_UPDATE_STRATEGY, DOMAIN
 from homeassistant.const import CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant
-
-from tests.common import MockConfigEntry
 
 
 async def test_async_remove_entry(

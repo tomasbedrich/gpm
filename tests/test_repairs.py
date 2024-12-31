@@ -1,11 +1,11 @@
 """Test GPM repairs."""
 
-from homeassistant.components.gpm import repairs
+from custom_components.gpm import repairs
+from pytest_homeassistant_custom_component.common import async_capture_events
+
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.setup import async_setup_component
-
-from tests.common import async_capture_events
 
 
 async def test_create_fix_flow_none(hass: HomeAssistant) -> None:

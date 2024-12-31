@@ -17,7 +17,7 @@
   ],
   "quality_scale": "bronze",
   "requirements": [
-    "GitPython==3.1.43"
+    "GitPython~=3.1.43"
   ],
   "version": "0.0.0"
 }

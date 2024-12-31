@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import AsyncMock
 
-from homeassistant.components.gpm._manager import (
+from custom_components.gpm._manager import (
     AlreadyClonedError,
     CloneError,
     IntegrationRepositoryManager,
@@ -12,11 +12,12 @@ from homeassistant.components.gpm._manager import (
     ResourceRepositoryManager,
     UpdateStrategy,
 )
-from homeassistant.components.gpm.const import (
+from custom_components.gpm.const import (
     CONF_DOWNLOAD_URL,
     CONF_UPDATE_STRATEGY,
     DOMAIN,
 )
+
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant

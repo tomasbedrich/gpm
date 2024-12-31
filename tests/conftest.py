@@ -7,30 +7,35 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from git import Remote, Repo
-
-from homeassistant.components.gpm import get_manager
-from homeassistant.components.gpm._manager import (
+from custom_components.gpm import get_manager
+from custom_components.gpm._manager import (
     IntegrationRepositoryManager,
     RepositoryManager,
     RepositoryType,
     ResourceRepositoryManager,
     UpdateStrategy,
 )
-from homeassistant.components.gpm.const import (
+from custom_components.gpm.const import (
     CONF_DOWNLOAD_URL,
     CONF_UPDATE_STRATEGY,
     DOMAIN,
 )
+from git import Remote, Repo
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from homeassistant.const import CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from . import DEFAULT_VERSION, TESTING_VERSIONS
 
-from tests.common import MockConfigEntry
-
 _LOGGER = logging.getLogger(__name__)
+
+
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):
+    """Needed due to usage of pytest-homeassistant-custom-component."""
+    return
 
 
 @pytest.fixture
@@ -65,11 +70,11 @@ def repo() -> Generator[None]:
     remote_mock.fetch = MagicMock(return_value=None)
     with (
         patch(
-            "homeassistant.components.gpm._manager.Repo.clone_from",
+            "custom_components.gpm._manager.Repo.clone_from",
             side_effect=create_repo,
         ),
         patch(
-            "homeassistant.components.gpm._manager.RepositoryManager._get_remote",
+            "custom_components.gpm._manager.RepositoryManager._get_remote",
             return_value=remote_mock,
         ),
     ):
@@ -91,10 +96,10 @@ async def integration_manager_fixture(
     hass: HomeAssistant, repo: None, tmp_path: Path
 ) -> AsyncGenerator[IntegrationRepositoryManager]:
     """Fixture for integration manager."""
-    # every instance is created using homeassistant.components.gpm.get_manager()
+    # every instance is created using custom_components.gpm.get_manager()
     manager = _testing_integration_manager(hass, tmp_path)
     with patch(
-        "homeassistant.components.gpm.IntegrationRepositoryManager",
+        "custom_components.gpm.IntegrationRepositoryManager",
         autospec=True,
         return_value=manager,
     ):
@@ -114,15 +119,15 @@ async def resource_manager_fixture(
         install_path.touch()
 
     manager = _testing_resource_manager(hass, tmp_path)
-    # every instance is created using homeassistant.components.gpm.get_manager()
+    # every instance is created using custom_components.gpm.get_manager()
     with (
         patch(
-            "homeassistant.components.gpm.ResourceRepositoryManager",
+            "custom_components.gpm.ResourceRepositoryManager",
             autospec=True,
             return_value=manager,
         ),
         patch(
-            "homeassistant.components.gpm._manager.async_download",
+            "custom_components.gpm._manager.async_download",
             side_effect=async_download,
         ),
     ):
@@ -164,7 +169,7 @@ def _testing_manager(
 ) -> RepositoryManager:
     """Get the RepositoryManager for testing.
 
-    Uses the same interface as homeassistant.components.gpm.get_manager().
+    Uses the same interface as custom_components.gpm.get_manager().
     """
     manager = get_manager(hass, data)
     for method in (
@@ -195,7 +200,7 @@ def _testing_manager(
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.gpm.async_setup_entry", return_value=True
+        "custom_components.gpm.async_setup_entry", return_value=True
     ) as mock_setup_entry:
         yield mock_setup_entry
 
