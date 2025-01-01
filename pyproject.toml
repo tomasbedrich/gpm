@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name        = "gpm"
-version     = "0.0.0"
+version     = "0.2.0"
 license     = {text = "MIT"}
 description = "GIT Package Manager for Home Assistant."
 readme      = "README.md"
