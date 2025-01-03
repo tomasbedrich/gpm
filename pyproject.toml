@@ -6,9 +6,7 @@ build-backend = "pdm.backend"
 
 [project]
 name        = "gpm"
-# TODO
-# dynamic     = ["version"]
-version     = "0.4.0"
+dynamic     = ["version"]
 license     = {text = "MIT"}
 description = "GIT Package Manager for Home Assistant."
 readme      = "README.md"
@@ -38,6 +36,10 @@ dependencies    = [
 
 [tool.pdm.build]
 includes = ["custom_components/gpm"]
+
+[tool.pdm.version]
+source = "call"
+getter = "scripts.get_version:get_version"
 
 [tool.pytest.ini_options]
 testpaths = [
