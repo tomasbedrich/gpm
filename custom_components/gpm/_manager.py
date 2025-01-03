@@ -371,6 +371,13 @@ class IntegrationRepositoryManager(RepositoryManager):
             custom_components = await self.hass.async_add_executor_job(
                 lambda: list(Path(self.working_dir / "custom_components").iterdir())
             )
+            # ignore some files to enable development of GPM
+            custom_components = list(
+                filter(
+                    lambda p: p.name not in ("__pycache__", "__init__.py"),
+                    custom_components,
+                )
+            )
         except FileNotFoundError:
             raise InvalidStructure(
                 "No `custom_components` directory found", self.working_dir
