@@ -8,7 +8,7 @@ build-backend = "pdm.backend"
 name        = "gpm"
 # TODO
 # dynamic     = ["version"]
-version     = "0.3.0"
+version     = "0.4.0"
 license     = {text = "MIT"}
 description = "GIT Package Manager for Home Assistant."
 readme      = "README.md"
