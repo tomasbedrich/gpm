@@ -3,7 +3,7 @@
 
 # based on https://github.com/hacs/get
 
-function run() {
+function install_gpm() {
     set -e
 
     RED_COLOR='\033[0;31m'
@@ -28,6 +28,24 @@ function run() {
     function checkRequirement () {
         if [ -z "$(command -v "$1")" ]; then
             error "'$1' is not installed"
+        fi
+    }
+
+    function add_gpm_config() {
+        local config_file="$1"
+
+        if ! grep -q "gpm:" "$config_file"; then
+            info "Adding GPM configuration to '$config_file'..."
+            cat >>"$config_file" <<EOF
+
+gpm:
+  gpm:
+    type: integration
+    url: https://github.com/tomasbedrich/gpm
+    update_strategy: latest_tag
+EOF
+        else
+            warn "GPM config already found in '$config_file', skipping..."
         fi
     }
 
@@ -76,6 +94,8 @@ function run() {
         info "Installing GPM as custom_component..."
         ln -s "../gpm/github_com.tomasbedrich.gpm/custom_components/gpm/" "$haPath/custom_components/gpm"
 
+        add_gpm_config "$haPath/configuration.yaml"
+
         info "Installation complete."
         info "Restart Home Assistant to start using GPM."
 
@@ -89,4 +109,4 @@ function run() {
     fi
 }
 
-run
+install_gpm
