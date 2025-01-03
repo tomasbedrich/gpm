@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
@@ -120,12 +121,32 @@ class GPMConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Invalid template")
                 errors[CONF_DOWNLOAD_URL] = "invalid_template"
 
+        default_value = self._get_resource_defaults(self._user_input)
+
         data_schema = self.add_suggested_values_to_schema(
-            STEP_RESOURCE_DATA_SCHEMA, user_input or {}
+            STEP_RESOURCE_DATA_SCHEMA, user_input or default_value
         )
         return self.async_show_form(
             step_id="resource", data_schema=data_schema, errors=errors
         )
+
+    def _get_resource_defaults(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        """Get default values for resource step."""
+        match = re.match(r"https://github.com/([^/]+)/([^/]+)", user_input[CONF_URL])
+        if not match:
+            return {}
+
+        user, repo = match.groups()
+        expected_download_url = "".join(
+            [
+                f"https://github.com/{user}/{repo}/",
+                "releases/download/{{version}}/",
+                f"{repo}.js",
+            ]
+        )
+        return {
+            CONF_DOWNLOAD_URL: expected_download_url,
+        }
 
     async def async_step_install(
         self, user_input: dict[str, Any] | None = None

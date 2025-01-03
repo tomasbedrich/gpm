@@ -12,6 +12,7 @@ from custom_components.gpm._manager import (
     ResourceRepositoryManager,
     UpdateStrategy,
 )
+from custom_components.gpm.config_flow import GPMConfigFlow
 from custom_components.gpm.const import (
     CONF_DOWNLOAD_URL,
     CONF_UPDATE_STRATEGY,
@@ -279,3 +280,21 @@ async def test_async_step_resource_invalid_template(
     await hass.async_block_till_done()
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert mock_setup_entry.call_count == 1
+
+
+async def test_get_resource_defaults_valid_url(hass: HomeAssistant) -> None:
+    """Test _get_resource_defaults with a valid URL."""
+    flow = GPMConfigFlow()
+    user_input = {CONF_URL: "https://github.com/user/awesome-card"}
+    defaults = flow._get_resource_defaults(user_input)
+    assert defaults == {
+        CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{version}}/awesome-card.js",
+    }
+
+
+async def test_get_resource_defaults_invalid_url(hass: HomeAssistant) -> None:
+    """Test _get_resource_defaults with an invalid URL."""
+    flow = GPMConfigFlow()
+    user_input = {CONF_URL: "https://gitlab.com/foo/bar"}
+    defaults = flow._get_resource_defaults(user_input)
+    assert defaults == {}
