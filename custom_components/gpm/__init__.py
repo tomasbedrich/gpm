@@ -6,8 +6,9 @@ import logging
 from typing import TYPE_CHECKING
 
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_TYPE, CONF_URL, Platform
 from homeassistant.exceptions import ConfigEntryError
 
@@ -34,7 +35,38 @@ if TYPE_CHECKING:
 
 PLATFORMS: list[Platform] = [Platform.UPDATE]
 
-CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                cv.slug: vol.Any(
+                    vol.Schema(
+                        {
+                            vol.Required(CONF_URL): cv.url,
+                            vol.Required(CONF_TYPE): vol.Equal(
+                                RepositoryType.INTEGRATION
+                            ),
+                            vol.Optional(
+                                CONF_UPDATE_STRATEGY, default=UpdateStrategy.LATEST_TAG
+                            ): vol.In(UpdateStrategy),
+                        }
+                    ),
+                    vol.Schema(
+                        {
+                            vol.Required(CONF_URL): cv.url,
+                            vol.Required(CONF_TYPE): vol.Equal(RepositoryType.RESOURCE),
+                            vol.Optional(
+                                CONF_UPDATE_STRATEGY, default=UpdateStrategy.LATEST_TAG
+                            ): vol.In(UpdateStrategy),
+                            vol.Required(CONF_DOWNLOAD_URL): cv.template,
+                        }
+                    ),
+                )
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA,
+)
 
 type GPMConfigEntry = ConfigEntry[RepositoryManager]
 
@@ -61,6 +93,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(URL_BASE, hass.config.path(PATH_RESOURCE_INSTALL_BASEDIR))]
     )
+
+    if DOMAIN not in config:
+        return True
+
+    # TODO handle configuration.yaml entry removal / update
+    for name, entry_data in config[DOMAIN].items():
+        _LOGGER.debug("Processing config entry `%s`: %s", name, entry_data)
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data=entry_data
+            )
+        )
+
     return True
 
 

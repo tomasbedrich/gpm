@@ -10,3 +10,9 @@ logger:
   default: info
   logs:
     custom_components.gpm: debug
+
+gpm:
+  gpm:
+    type: integration
+    url: https://github.com/tomasbedrich/gpm
+    update_strategy: latest_tag

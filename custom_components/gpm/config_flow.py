@@ -59,6 +59,22 @@ class GPMConfigFlow(ConfigFlow, domain=DOMAIN):
     _user_input: dict[str, str]
     manager: RepositoryManager
 
+    async def async_step_import(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Handle configuration.yaml entry."""
+        self.manager = get_manager(self.hass, entry_data)
+        await self.async_set_unique_id(self.manager.unique_id)
+        self._abort_if_unique_id_configured()
+
+        # TODO
+        # if not await self.manager.is_installed():
+        #     await self.manager.install()
+
+        title = await self.manager.get_title()
+        return self.async_create_entry(
+            title=title,
+            data=entry_data,
+        )
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
