@@ -1,11 +1,13 @@
 # The contents of this file is based on https://github.com/home-assistant/core/blob/dev/pyproject.toml
 
 [build-system]
-requires = ["setuptools==75.1.0"]
-build-backend = "setuptools.build_meta"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [project]
 name        = "gpm"
+# TODO
+# dynamic     = ["version"]
 version     = "0.2.0"
 license     = {text = "MIT"}
 description = "GIT Package Manager for Home Assistant."
@@ -34,11 +36,8 @@ dependencies    = [
     "pytest-homeassistant-custom-component~=0.13",
 ]
 
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.packages.find]
-include = ["custom_components.gpm"]
+[tool.pdm.build]
+includes = ["custom_components/gpm"]
 
 [tool.pytest.ini_options]
 testpaths = [

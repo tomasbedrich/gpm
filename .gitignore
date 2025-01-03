@@ -1,14 +1,10 @@
-# artifacts
 __pycache__
 .pytest*
 *.egg-info
 */build/*
 */dist/*
-
-
-# misc
+.pdm-build/
 .coverage
-.vscode
 coverage.xml
 .ruff_cache
 
@@ -16,4 +12,9 @@ coverage.xml
 # Home Assistant configuration
 config/*
 !config/configuration.yaml
+
+# enable development of GPM by storing symlinks in GIT in the same structure as if GPM is normally installed
+!config/gpm
+!config/gpm/github_com.tomasbedrich.gpm
+!config/custom_components
 !config/custom_components/gpm
