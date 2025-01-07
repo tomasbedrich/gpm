@@ -1,61 +1,82 @@
-# GPM - GIT Package Manager
+# GPM - Git Package Manager
 
-[![GitHub Release][releases-shield]][releases]
+GPM (GIT Package Manager) is a Home Assistant [integration](https://www.home-assistant.io/docs/glossary/#custom-integration) that provides an intuitive interface for managing custom_components and [dashboard](https://www.home-assistant.io/dashboards) resources directly from GIT repositories.
 
-This Home Assistant [integration][custom-integration] offers a native user interface for managing `custom_components` and [dashboard][dashboard] resources.
+## Features
 
-## Installing GPM
+- **Manage custom integrations**: Easily install, update, and maintain Home Assistant custom_components from GIT repositories.
+- **Simplify dashboard customization**: Download and update custom cards, themes, and other frontend resources with minimal effort.
+- **Lightweight and flexible**: Works with any GIT repository and avoids dependencies on third-party APIs.
 
-Execute following command to install GPM:
+## Installation
+
+To install GPM, run the following command:
+
 ```bash
 wget -O - https://raw.githubusercontent.com/tomasbedrich/gpm/refs/heads/main/install/install.sh | bash -
 ```
 
-## Using GPM
+Once installed, restart your Home Assistant instance.
 
-1. Navigate to: "Settings" -> "Devices & Services" -> "Integrations".
-2. For each package which should be managed using GPM, press "+ Add integration". Select GPM and follow the on-screen form.
 
-### Installing integrations
+## Managing packages with GPM
 
-Home Assistant `custom_components` are third-party integrations that extend Home Assistant's functionality. They are located in the `custom_components` directory within the Home Assistant configuration directory, typically at `/config/custom_components/`. Each custom component resides in its own subdirectory within this directory.
+1. Go to **Settings** -> **Devices & Services** -> **Integrations**.
+2. For each package you want to manage with GPM, click **+ Add Integration**, select **GPM**, and complete the on-screen form.
 
-When a custom component is available as a public GIT repository, users can install it using the HTTP address of the repository. The address is pasted into a GPM config flow, and GPM downloads (technically speaking "[clones](https://git-scm.com/docs/git-clone)") the latest version and creates the appropriate symlinks. GPM also publishes an [update entity](https://www.home-assistant.io/integrations/update/) to facilitate easy updates of the integration.
+
+### Installing custom integrations
+
+Custom integrations (known as custom_components) extend Home Assistant’s capabilities. These integrations reside in the `custom_components` folder within the Home Assistant configuration directory.
+
+To install a custom integration with GPM:
+
+1. Obtain the HTTP URL of the GIT repository containing the integration.
+2. Add the repository URL in GPM’s configuration flow.
+3. GPM will [clone](https://git-scm.com/docs/git-clone) the latest version of the repository and set up the required symlinks.
+4. GPM automatically creates an [update entity](https://www.home-assistant.io/integrations/update/) to notify you about updates.
 
 ### Installing dashboard resources
 
-Dashboard resources are additional frontend elements that enhance the Home Assistant user interface. They can include custom cards, themes, and other UI components. These resources are typically added to the `www` directory within the Home Assistant configuration directory and referenced in the dashboard configuration YAML or UI editor.
+Dashboard resources enhance the Home Assistant frontend with custom cards, themes, and more. These resources are stored in the `www` directory within the Home Assistant configuration folder.
 
-GPM assists with dashboard resource management similarly to integrations. There is one extra step though: a user needs to provide a download URL for the dashboard resource file. GPM then automatically downloads the file on every update (more precisely "[checkout](https://git-scm.com/docs/git-checkout)") of the repository. When configuring the download URL, the `{{ version }}` placeholder should be used. On every download, GPM substitutes `{{ version }}` with the respective tag or commit hash of the GIT repository.
+To install dashboard resources with GPM:
 
-An example download URL for a GitHub-based repository of a dashboard resource, which publishes its builds as GitHub releases: `https://github.com/example-user/awesome-card/releases/download/{{ version }}/awesome-card.js`
+1. Provide the download URL for the resource file in GPM’s configuration flow.
+2. Use `{{ version }}` as a placeholder in the URL for dynamic version updates. GPM replaces this placeholder with the corresponding tag or commit hash during updates.
 
-#### Why manual download URL configuration is needed?
+**Example URL:**
 
-Frontend resources are often distributed as bundled JavaScript files (i.e., build artifacts), storage of which in the GIT repository is considered a bad practice. Because of that, GPM doesn't even look for build artifacts in the GIT repository.
+For a GitHub repository that publishes builds as releases:
 
-GPM also doesn't limit the user to any particular GIT remote (GitHub, GitLab, etc.), therefore it cannot make assumptions about the expected download URL based on the "Releases" feature of the GIT remote.
+```
+https://github.com/example-user/awesome-card/releases/download/{{ version }}/awesome-card.js
+```
 
-## GPM compared to HACS
+#### Why configure download URLs manually?
 
-[HACS](https://hacs.xyz/) is an excellent and widely used alternative to GPM.
+Many frontend resources are distributed as pre-built artifacts (e.g., JavaScript bundles), which are not typically stored directly in GIT repositories. By manually specifying the download URL, you maintain flexibility to use resources from any GIT remote (e.g., GitHub, GitLab, etc.) without relying on specific repository structures or APIs.
 
-GPM is similar to HACS in the following ways:
 
-- GPM also manages `custom_components` and dashboard resources.
-- GPM requires [the same repository structure as HACS](https://hacs.xyz/docs/publish/integration/) for GIT repositories of `custom_components` (i.e., HACS packages are installable using GPM).
-- GPM assumes that a new tag or commit must be published to release a new version of a custom component or dashboard resource.
+## GPM vs HACS
 
-Compared to HACS:
+[HACS](https://hacs.xyz/) is popular alternative to GPM for managing custom components and dashboard resources. Here’s how GPM compares:
 
-- GPM allows installation from _all remotes_, i.e., all GIT repositories that can be referenced using an HTTP address.
-- GPM doesn't require a GitHub account.
-- GPM intentionally avoids using any third-party APIs (e.g., not showing release notes, not using pre-built release bundles for dashboard resources). Pure GIT.
-- HACS has more features, some of which GPM will likely never get (new repository explorer, support for AppDaemon, etc.).
+### Similarities
 
-Overall: GPM is a lightweight and flexible alternative to HACS for advanced users.
+- Both manage custom_components and dashboard resources.
+- Both require repositories to follow [the HACS repository structure](https://hacs.xyz/docs/publish/integration/).
+- Updates are triggered by publishing new tags or commits.
 
-[custom-integration]: https://www.home-assistant.io/docs/glossary/#custom-integration
-[dashboard]: https://www.home-assistant.io/dashboards
-[releases-shield]: https://img.shields.io/github/release/tomasbedrich/gpm.svg?style=for-the-badge
-[releases]: https://github.com/tomasbedrich/gpm/releases
+### Advantages of GPM
+
+- **No GitHub account needed**: Install from any GIT repository using an HTTP URL.
+- **No third-party API reliance**: GPM operates purely with GIT commands, avoiding external dependencies like release notes or pre-built bundles.
+- **Lightweight and flexible**: Ideal for advanced users who value simplicity and customization.
+
+### Advantages of HACS
+
+- Richer feature set, including repository store, AppDaemon support, etc.
+- Easier for beginners to get started with.
+
+Summary: GPM is a lightweight alternative for advanced users who prefer flexibility over additional features.
