@@ -132,9 +132,7 @@ class GPMConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def _get_resource_defaults(self, user_input: dict[str, Any]) -> dict[str, Any]:
         """Get default values for resource step."""
-        raw_url = user_input[CONF_URL].rstrip(" /")
-        if raw_url.endswith(".git"):
-            raw_url = raw_url[:-4]
+        raw_url = user_input[CONF_URL].rstrip(" /").removesuffix(".git")
         match = re.match(r"https://github.com/([^/]+)/([^/]+)", raw_url)
         if not match:
             return {}
