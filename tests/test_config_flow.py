@@ -292,6 +292,16 @@ async def test_get_resource_defaults_valid_url(hass: HomeAssistant) -> None:
     }
 
 
+async def test_get_resource_defaults_git_suffix(hass: HomeAssistant) -> None:
+    """Test _get_resource_defaults with a valid URL."""
+    flow = GPMConfigFlow()
+    user_input = {CONF_URL: "https://github.com/thomasloven/lovelace-card-mod.git"}
+    defaults = flow._get_resource_defaults(user_input)
+    assert defaults == {
+        CONF_DOWNLOAD_URL: "https://github.com/thomasloven/lovelace-card-mod/releases/download/{{version}}/lovelace-card-mod.js",
+    }
+
+
 async def test_get_resource_defaults_invalid_url(hass: HomeAssistant) -> None:
     """Test _get_resource_defaults with an invalid URL."""
     flow = GPMConfigFlow()
