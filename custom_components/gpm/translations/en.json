@@ -29,7 +29,7 @@
                     "url": "URL"
                 },
                 "data_description": {
-                    "type": "Integrations are `custom_components` that are not part of Home Assistant.\nRepositories are frontend resources like themes, Lovelace plugins, etc.",
+                    "type": "Integrations are `custom_components` that are not part of Home Assistant.\nResources are frontend elements like themes, Lovelace plugins, etc.",
                     "update_strategy": "Determines which references from repository are reported as updates in Home Assistant.\nLatest tag will offer the latest stable version. Latest unstable tag will offer the latest tag, even if it is a dev, alpha, beta, or RC version. Latest commit will always follow the latest commit (this is the least stable option).",
                     "url": "E.g.: `https://github.com/user/awesome-component.git`"
                 },
@@ -57,7 +57,7 @@
         "type": {
             "options": {
                 "integration": "Integration",
-                "repository": "Repository"
+                "resource": "Resource"
             }
         },
         "update_strategy": {
