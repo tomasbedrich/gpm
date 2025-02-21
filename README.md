@@ -38,6 +38,8 @@ To install a custom integration with GPM:
 
 ### Installing dashboard resources
 
+**TL;DR: [Screencast and example instructions](https://github.com/tomasbedrich/gpm/wiki/How-to:-installing-dashboard-resource) are available.**
+
 Dashboard resources enhance the Home Assistant frontend with custom cards, themes, and more. These resources are stored in the `www` directory within the Home Assistant configuration folder.
 
 To install dashboard resources with GPM:
