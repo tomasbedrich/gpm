@@ -30,7 +30,7 @@ dependencies    = [
     "colorlog==6.9.0",
     "homeassistant==2024.12.0",
     "pip>=21.3.1",
-    "ruff==0.9.10",
+    "ruff==0.11.0",
     "pytest-homeassistant-custom-component~=0.13",
 ]
 
@@ -141,7 +141,6 @@ select = [
     "S317", # suspicious-xml-sax-usage
     "S318", # suspicious-xml-mini-dom-usage
     "S319", # suspicious-xml-pull-dom-usage
-    "S320", # suspicious-xmle-tree-usage
     "S601", # paramiko-call
     "S602", # subprocess-popen-with-shell-equals-true
     "S604", # call-with-shell-equals-true
