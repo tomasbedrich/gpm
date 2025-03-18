@@ -21,7 +21,7 @@ class RestartRequiredFixFlow(RepairsFlow):
         return self.async_show_menu(
             step_id="init",
             menu_options=["restart"],
-            description_placeholders=cast(dict[str, str], self.data),
+            description_placeholders=cast("dict[str, str]", self.data),
         )
 
     async def async_step_restart(
