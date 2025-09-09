@@ -27,10 +27,10 @@ requires-python = ">=3.13"
 dependencies    = [
     "GitPython~=3.1.43",
     "colorlog==6.9.0",
-    "homeassistant==2025.4.4",
+    "homeassistant>=2025.4.4",
     "pip>=21.3.1",
     "ruff==0.12.12",
-    "pytest-homeassistant-custom-component==0.13.236",
+    "pytest-homeassistant-custom-component==0.13.278",
 ]
 
 [tool.pdm.build]
