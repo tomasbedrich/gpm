@@ -430,6 +430,68 @@ async def test_install_failure_cleanup_fixed_simple(
     print(f"After calling remove - Directory exists: {working_dir.exists()}")
 
 
+async def test_end_to_end_scenario_from_issue(
+    hass: HomeAssistant, tmp_path: Path
+) -> None:
+    """Test the exact scenario described in the issue: successful clone followed by failed subsequent steps."""
+    from custom_components.gpm._manager import IntegrationRepositoryManager, UpdateStrategy, AlreadyClonedError
+    
+    # Create a real manager without mocking
+    manager = IntegrationRepositoryManager(
+        hass=hass,
+        repo_url="https://github.com/user/awesome-component",
+        update_strategy=UpdateStrategy.LATEST_TAG,
+    )
+    manager.clone_basedir = tmp_path / "clone_basedir"
+    manager.clone_basedir.mkdir()
+    manager.install_basedir = tmp_path / "install_basedir" 
+    manager.install_basedir.mkdir()
+    
+    working_dir = manager.working_dir
+    
+    # Mock clone to create a real directory structure without git operations
+    async def create_fake_repo_with_invalid_structure():
+        working_dir.mkdir(parents=True, exist_ok=True)
+        (working_dir / ".git").mkdir()
+        # Create the structure that get_component_dir expects (but make it invalid)
+        custom_components = working_dir / "custom_components"
+        custom_components.mkdir()
+        # Intentionally create multiple components to trigger InvalidStructure
+        (custom_components / "awesome_component").mkdir()
+        (custom_components / "another_component").mkdir()  # This will cause InvalidStructure
+        
+    # First attempt: should fail due to InvalidStructure but clean up properly  
+    with patch.object(manager, "clone", side_effect=create_fake_repo_with_invalid_structure):
+        with patch.object(manager, "get_latest_version", return_value="v1.0.0"):
+            with patch.object(manager, "checkout"):
+                # This should fail with InvalidStructure after successful clone
+                with pytest.raises(InvalidStructure):
+                    await manager.install()
+    
+    # Verify cleanup happened - directory should not exist
+    assert not working_dir.exists(), "Directory should have been cleaned up after failed installation"
+    
+    # Second attempt: should not fail with AlreadyClonedError (the original bug)
+    # This time, let's make it succeed to verify the fix
+    async def create_fake_repo_valid():
+        working_dir.mkdir(parents=True, exist_ok=True)
+        (working_dir / ".git").mkdir()
+        # Create the structure that get_component_dir expects (valid this time)
+        custom_components = working_dir / "custom_components"
+        custom_components.mkdir()
+        (custom_components / "awesome_component").mkdir()
+        
+    with patch.object(manager, "clone", side_effect=create_fake_repo_valid):
+        with patch.object(manager, "get_latest_version", return_value="v1.0.0"):
+            with patch.object(manager, "checkout"):
+                # This should succeed without throwing AlreadyClonedError
+                await manager.install()
+    
+    # Verify the second attempt succeeded
+    assert working_dir.exists(), "Directory should exist after successful installation"
+    assert await manager.is_cloned(), "Repository should be cloned after successful installation"
+
+
 async def test_resource_install_failure_cleanup_fixed(
     resource_manager: ResourceRepositoryManager,
 ) -> None:

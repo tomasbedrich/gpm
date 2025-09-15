@@ -229,7 +229,7 @@ class RepositoryManager:
                 await self.clone()
                 latest_version = await self.get_latest_version()
                 await self.checkout(latest_version)
-            except Exception:
+            except (GPMError, OSError, FileExistsError):
                 # Clean up cloned repository if clone step succeeds but later steps fail
                 if await self.is_cloned():
                     await self.remove()
@@ -256,7 +256,7 @@ class RepositoryManager:
         try:
             if await self.is_installed():
                 await self.uninstall()
-        except Exception:
+        except (InvalidStructure, OSError):
             # If checking installation status fails, skip uninstall and proceed with cleanup
             pass
         _LOGGER.info("Removing %s", self.working_dir)
@@ -357,7 +357,7 @@ class IntegrationRepositoryManager(RepositoryManager):
             except FileExistsError:
                 raise AlreadyInstalledError(install_path) from None
             await self._create_restart_issue("install")
-        except Exception:
+        except (GPMError, OSError, FileExistsError):
             # Clean up cloned repository if installation fails after successful clone
             if await self.is_cloned():
                 await self.remove()
@@ -469,7 +469,7 @@ class ResourceRepositoryManager(RepositoryManager):
             _LOGGER.info("Installing %s", resource_url)
             await self._add_resource(resource_url)
             await self._refresh_frontend()
-        except Exception:
+        except (GPMError, OSError, ClientError):
             # Clean up cloned repository if installation fails after successful clone
             if await self.is_cloned():
                 await self.remove()
