@@ -173,7 +173,42 @@ class RepositoryManager:
             def _get_current_version() -> str:
                 if self.update_strategy == UpdateStrategy.LATEST_COMMIT:
                     return repo.head.commit.hexsha
-                return repo.git.describe("--tags", "--abbrev=0")
+
+                # Get all tags that point to the current commit
+                current_commit = repo.head.commit
+                tags_on_commit = [
+                    tag for tag in repo.tags if tag.commit == current_commit
+                ]
+
+                if not tags_on_commit:
+                    # No tags on current commit, fall back to git describe
+                    return repo.git.describe("--tags", "--abbrev=0")
+
+                if len(tags_on_commit) == 1:
+                    # Only one tag, return it
+                    return str(tags_on_commit[0])
+
+                # Multiple tags on the same commit - prioritize semantic versions
+                semantic_tags = []
+                for tag in tags_on_commit:
+                    tag_str = str(tag)
+                    try:
+                        version = AwesomeVersion(tag_str)
+                        if version.valid:
+                            semantic_tags.append((version, tag_str))
+                    except (ValueError, TypeError):
+                        # Tag is not a valid semantic version, skip it
+                        pass
+
+                if semantic_tags:
+                    # Sort by AwesomeVersion in descending order to get the highest semantic version
+                    # AwesomeVersion handles proper semantic version comparison (major.minor.patch)
+                    # ensuring that v1.25.1 > v1.25.0 > v1.24.9 > v1.25.0-beta etc.
+                    semantic_tags.sort(key=lambda x: x[0], reverse=True)
+                    return semantic_tags[0][1]
+
+                # No semantic version tags found, fall back to first tag
+                return str(tags_on_commit[0])
 
             self._current_version_cache = await self.hass.async_add_executor_job(
                 _get_current_version
