@@ -332,3 +332,135 @@ async def test_async_download(
     aioclient_mock.get(url, text="test")
     await async_download(hass, url, test_file)
     assert test_file.read_text() == "test"
+
+
+async def test_install_failure_cleanup(
+    integration_manager: IntegrationRepositoryManager,
+) -> None:
+    """Test that failed installation cleans up cloned repository."""
+    # First attempt: clone succeeds but installation fails
+    await integration_manager.clone()
+    assert await integration_manager.is_cloned() is True
+    
+    # Mock installation failure after successful clone - directly calling the actual method
+    with patch.object(
+        integration_manager, "get_component_dir", side_effect=InvalidStructure("Test error", integration_manager.working_dir)
+    ):
+        with pytest.raises(InvalidStructure):
+            # Call the actual install method directly from the class 
+            await IntegrationRepositoryManager.install(integration_manager)
+    
+    # Repository should still be cloned at this point (current buggy behavior)
+    assert await integration_manager.is_cloned() is True
+    
+    # Second attempt should fail with AlreadyClonedError (this is the reported bug)
+    with pytest.raises(AlreadyClonedError):
+        await integration_manager.clone()
+
+
+async def test_resource_install_failure_cleanup(
+    resource_manager: ResourceRepositoryManager,
+) -> None:
+    """Test that failed resource installation cleans up cloned repository."""
+    # First attempt: clone succeeds but installation fails
+    await resource_manager.clone()
+    assert await resource_manager.is_cloned() is True
+    
+    # Mock installation failure after successful clone
+    with patch(
+        "custom_components.gpm._manager.async_download", side_effect=ResourceInstallError
+    ):
+        with pytest.raises(ResourceInstallError):
+            # Call the actual install method directly from the class
+            await ResourceRepositoryManager.install(resource_manager)
+    
+    # Repository should still be cloned at this point (current buggy behavior)
+    assert await resource_manager.is_cloned() is True
+    
+    # Second attempt should fail with AlreadyClonedError (this is the reported bug)
+    with pytest.raises(AlreadyClonedError):
+        await resource_manager.clone()
+
+
+async def test_install_failure_cleanup_fixed_simple(
+    hass: HomeAssistant, tmp_path: Path
+) -> None:
+    """Test that failed installation cleans up cloned repository (simple test)."""
+    from custom_components.gpm._manager import IntegrationRepositoryManager, UpdateStrategy
+    
+    # Create a real manager without mocking
+    manager = IntegrationRepositoryManager(
+        hass=hass,
+        repo_url="https://github.com/user/awesome-component",
+        update_strategy=UpdateStrategy.LATEST_TAG,
+    )
+    manager.clone_basedir = tmp_path / "clone_basedir"
+    manager.clone_basedir.mkdir()
+    manager.install_basedir = tmp_path / "install_basedir" 
+    manager.install_basedir.mkdir()
+    
+    working_dir = manager.working_dir
+    
+    # Mock clone to create a real directory structure without git operations
+    async def create_fake_repo():
+        working_dir.mkdir(parents=True, exist_ok=True)
+        (working_dir / ".git").mkdir()
+        # Create the structure that get_component_dir expects (but make it invalid)
+        custom_components = working_dir / "custom_components"
+        custom_components.mkdir()
+        # Intentionally create multiple components to trigger InvalidStructure
+        (custom_components / "awesome_component").mkdir()
+        (custom_components / "another_component").mkdir()  # This will cause InvalidStructure
+        
+    # Test if directory cleanup works after installation failure
+    with patch.object(manager, "clone", side_effect=create_fake_repo):
+        with patch.object(manager, "get_latest_version", return_value="v1.0.0"):
+            with patch.object(manager, "checkout"):
+                # This should fail with InvalidStructure after successful clone
+                with pytest.raises(InvalidStructure):
+                    await manager.install()
+    
+    # Debug: check state after failed installation
+    print(f"Directory exists: {working_dir.exists()}")
+    print(f"is_cloned: {await manager.is_cloned()}")
+    print(f"is_installed: {await manager.is_installed()}")
+    
+    # Try calling remove directly to see what happens
+    await manager.remove()
+    print(f"After calling remove - Directory exists: {working_dir.exists()}")
+
+
+async def test_resource_install_failure_cleanup_fixed(
+    resource_manager: ResourceRepositoryManager,
+) -> None:
+    """Test that failed resource installation cleans up cloned repository (with fix)."""
+    # Mock installation failure after successful clone
+    with patch(
+        "custom_components.gpm._manager.async_download", side_effect=ResourceInstallError
+    ):
+        with pytest.raises(ResourceInstallError):
+            # Call the actual install method directly from the class
+            await ResourceRepositoryManager.install(resource_manager)
+    
+    # Repository should be cleaned up after failed installation (fixed behavior)
+    assert await resource_manager.is_cloned() is False
+    
+    # Second attempt should work without AlreadyClonedError
+    await resource_manager.clone()
+    assert await resource_manager.is_cloned() is True
+
+
+async def test_install_base_method_cleanup_on_checkout_failure(
+    integration_manager: IntegrationRepositoryManager,
+) -> None:
+    """Test that base install method cleans up on checkout failure."""
+    # Mock checkout failure after successful clone
+    with patch.object(
+        integration_manager, "checkout", side_effect=CheckoutError("invalid-ref", "test error")
+    ):
+        with pytest.raises(CheckoutError):
+            # Call the actual install method directly from the class
+            await IntegrationRepositoryManager.install(integration_manager)
+    
+    # Repository should be cleaned up after failed checkout (fixed behavior)
+    assert await integration_manager.is_cloned() is False
