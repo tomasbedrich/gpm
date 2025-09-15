@@ -225,9 +225,14 @@ class RepositoryManager:
     async def install(self) -> None:
         """Install the GIT repo."""
         if not await self.is_cloned():
-            await self.clone()
-            latest_version = await self.get_latest_version()
-            await self.checkout(latest_version)
+            try:
+                await self.clone()
+                latest_version = await self.get_latest_version()
+                await self.checkout(latest_version)
+            except (GPMError, OSError, FileExistsError):
+                if await self.is_cloned():
+                    await self.remove()
+                raise
 
     @ensure_installed
     @abstractmethod
@@ -247,8 +252,11 @@ class RepositoryManager:
         """Remove the GIT repo."""
         if not await self.is_cloned():
             return
-        if await self.is_installed():
-            await self.uninstall()
+        try:
+            if await self.is_installed():
+                await self.uninstall()
+        except (InvalidStructure, OSError):
+            pass
         _LOGGER.info("Removing %s", self.working_dir)
         await self.hass.async_add_executor_job(shutil.rmtree, self.working_dir)
         self._current_version_cache = None
@@ -332,20 +340,25 @@ class IntegrationRepositoryManager(RepositoryManager):
 
     async def install(self) -> None:
         """Install the GIT repo as a HA integration."""
-        await super().install()
-        component_dir = await self.get_component_dir()
-        install_path = await self.get_install_path()
-        _LOGGER.info("Installing %s to %s", component_dir, install_path)
-        await self.hass.async_add_executor_job(
-            lambda: install_path.parent.mkdir(parents=True, exist_ok=True)
-        )
         try:
+            await super().install()
+            component_dir = await self.get_component_dir()
+            install_path = await self.get_install_path()
+            _LOGGER.info("Installing %s to %s", component_dir, install_path)
             await self.hass.async_add_executor_job(
-                install_path.symlink_to, component_dir.resolve()
+                lambda: install_path.parent.mkdir(parents=True, exist_ok=True)
             )
-        except FileExistsError:
-            raise AlreadyInstalledError(install_path) from None
-        await self._create_restart_issue("install")
+            try:
+                await self.hass.async_add_executor_job(
+                    install_path.symlink_to, component_dir.resolve()
+                )
+            except FileExistsError:
+                raise AlreadyInstalledError(install_path) from None
+            await self._create_restart_issue("install")
+        except (GPMError, OSError, FileExistsError):
+            if await self.is_cloned():
+                await self.remove()
+            raise
 
     @RepositoryManager.ensure_installed
     async def update(self, version: str) -> None:
@@ -446,12 +459,17 @@ class ResourceRepositoryManager(RepositoryManager):
 
     async def install(self) -> None:
         """Install the GIT repo as a HA resource."""
-        await super().install()
-        await self._download_resource()
-        resource_url = await self.get_resource_url()
-        _LOGGER.info("Installing %s", resource_url)
-        await self._add_resource(resource_url)
-        await self._refresh_frontend()
+        try:
+            await super().install()
+            await self._download_resource()
+            resource_url = await self.get_resource_url()
+            _LOGGER.info("Installing %s", resource_url)
+            await self._add_resource(resource_url)
+            await self._refresh_frontend()
+        except (GPMError, OSError, ClientError):
+            if await self.is_cloned():
+                await self.remove()
+            raise
 
     @RepositoryManager.ensure_installed
     async def uninstall(self) -> None:
