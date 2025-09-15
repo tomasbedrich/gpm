@@ -383,3 +383,33 @@ async def test_get_current_version_multiple_semantic_tags(
     # Should return the highest semantic version
     current_version = await manager.get_current_version()
     assert current_version == "v1.1.0"
+
+
+async def test_get_current_version_same_major_version_tags(
+    manager: RepositoryManager,
+) -> None:
+    """Test get_current_version returns highest semantic version when multiple tags with same major version exist."""
+    manager.update_strategy = UpdateStrategy.LATEST_TAG
+    await manager.install()
+
+    # Simulate adding multiple semantic tags with same major version on the same commit
+    repo = await manager._get_repo()
+
+    def add_same_major_version_tags():
+        # Current commit has v1.0.0, add more v1.x.x tags
+        repo.create_tag("v1.25.0")  # Higher minor version
+        repo.create_tag("v1.25.1")  # Higher patch version
+        repo.create_tag("v1.24.9")  # Lower minor.patch
+        repo.create_tag("v1.25.0-beta")  # Pre-release of same version
+        repo.create_tag("untagged-abc123")  # Non-semantic tag (should be ignored)
+        return repo
+
+    await manager.hass.async_add_executor_job(add_same_major_version_tags)
+
+    # Clear the cache to force a fresh check
+    manager._current_version_cache = None
+
+    # Should return v1.25.1 as it's the highest semantic version
+    # Order: v1.25.1 > v1.25.0 > v1.25.0-beta > v1.24.9 > v1.0.0
+    current_version = await manager.get_current_version()
+    assert current_version == "v1.25.1"

@@ -201,7 +201,9 @@ class RepositoryManager:
                         pass
 
                 if semantic_tags:
-                    # Return the highest semantic version tag
+                    # Sort by AwesomeVersion in descending order to get the highest semantic version
+                    # AwesomeVersion handles proper semantic version comparison (major.minor.patch)
+                    # ensuring that v1.25.1 > v1.25.0 > v1.24.9 > v1.25.0-beta etc.
                     semantic_tags.sort(key=lambda x: x[0], reverse=True)
                     return semantic_tags[0][1]
 
