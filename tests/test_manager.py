@@ -332,3 +332,54 @@ async def test_async_download(
     aioclient_mock.get(url, text="test")
     await async_download(hass, url, test_file)
     assert test_file.read_text() == "test"
+
+
+async def test_get_current_version_with_multiple_tags(
+    manager: RepositoryManager,
+) -> None:
+    """Test get_current_version returns semantic version when multiple tags exist on same commit."""
+    manager.update_strategy = UpdateStrategy.LATEST_TAG
+    await manager.install()
+
+    # Simulate adding a non-semantic tag on the same commit as v1.0.0
+    repo = await manager._get_repo()
+
+    def add_non_semantic_tag():
+        # Add a non-semantic tag on the current commit (which should be v1.0.0)
+        repo.create_tag("untagged-b5abcaae183f221f05c9")
+        return repo
+
+    await manager.hass.async_add_executor_job(add_non_semantic_tag)
+
+    # Clear the cache to force a fresh check
+    manager._current_version_cache = None
+
+    # The current version should still be v1.0.0, not the non-semantic tag
+    current_version = await manager.get_current_version()
+    assert current_version == "v1.0.0"
+
+
+async def test_get_current_version_multiple_semantic_tags(
+    manager: RepositoryManager,
+) -> None:
+    """Test get_current_version returns highest semantic version when multiple semantic tags exist."""
+    manager.update_strategy = UpdateStrategy.LATEST_TAG
+    await manager.install()
+
+    # Simulate adding multiple semantic tags on the same commit
+    repo = await manager._get_repo()
+
+    def add_multiple_semantic_tags():
+        # Add lower version tags on the current commit (which should be v1.0.0)
+        repo.create_tag("v0.9.0")
+        repo.create_tag("v1.1.0")  # This should be returned as highest
+        return repo
+
+    await manager.hass.async_add_executor_job(add_multiple_semantic_tags)
+
+    # Clear the cache to force a fresh check
+    manager._current_version_cache = None
+
+    # Should return the highest semantic version
+    current_version = await manager.get_current_version()
+    assert current_version == "v1.1.0"
