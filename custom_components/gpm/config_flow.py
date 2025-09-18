@@ -178,7 +178,6 @@ class GPMConfigFlow(ConfigFlow, domain=DOMAIN):
         except AlreadyClonedError:
             _LOGGER.exception("Installation failed")
             abort_reason = "install_failed"
-            await self.manager.remove()
         except GPMError:
             _LOGGER.exception("Installation failed")
             abort_reason = "install_failed"
