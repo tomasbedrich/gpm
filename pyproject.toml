@@ -30,7 +30,7 @@ dependencies    = [
     "homeassistant>=2025.4.4",
     "pip>=21.3.1",
     "ruff==0.14.13",
-    "pytest-homeassistant-custom-component==0.13.306",
+    "pytest-homeassistant-custom-component==0.13.307",
 ]
 
 [tool.pdm.build]
