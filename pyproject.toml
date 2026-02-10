@@ -26,14 +26,14 @@ classifiers = [
 requires-python = ">=3.13.2"
 dependencies    = [
     "GitPython~=3.1.43",
-    "homeassistant>=2025.4.4",
+    "homeassistant>=2026.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "colorlog==6.10.1",
-    "ruff==0.14.14",
-    "pytest-homeassistant-custom-component==0.13.308",
+    "ruff==0.15.0",
+    "pytest-homeassistant-custom-component==0.13.314",
 ]
 
 [tool.hatch.version]

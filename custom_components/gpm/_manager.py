@@ -528,7 +528,7 @@ class ResourceRepositoryManager(RepositoryManager):
     ) -> ResourceStorageCollection:
         """Return the Lovelace resource storage."""
         try:
-            res: ResourceStorageCollection = hass.data[LOVELACE_DOMAIN]["resources"]
+            res: ResourceStorageCollection = hass.data[LOVELACE_DOMAIN].resources
         except KeyError as e:
             raise ResourcesUpdateError("ResourceStorageCollection not found") from e
         if not hasattr(res, "store") or res.store is None:

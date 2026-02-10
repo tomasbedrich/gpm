@@ -30,6 +30,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMocker,
 )
 
+from homeassistant.components.lovelace import LovelaceData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
@@ -206,19 +207,33 @@ async def test_get_resource_storage(hass: HomeAssistant) -> None:
     lovelace_resources = await ResourceRepositoryManager._get_resource_storage(hass)
     assert lovelace_resources is not None
 
-    hass.data[LOVELACE_DOMAIN] = {}
+    # Test missing LOVELACE_DOMAIN key entirely
+    del hass.data[LOVELACE_DOMAIN]
     with pytest.raises(
         ResourcesUpdateError, match="ResourceStorageCollection not found"
     ):
         await ResourceRepositoryManager._get_resource_storage(hass)
 
-    hass.data[LOVELACE_DOMAIN] = {"resources": Mock(store=None)}
+    # Restore for next test
+    await async_setup_component(hass, "lovelace", {})
+
+    # Test YAML mode (resources with store=None)
+    hass.data[LOVELACE_DOMAIN] = LovelaceData(
+        resource_mode="yaml",
+        dashboards={},
+        resources=Mock(store=None),
+        yaml_dashboards={},
+    )
     with pytest.raises(ResourcesUpdateError, match="YAML mode detected"):
         await ResourceRepositoryManager._get_resource_storage(hass)
 
-    hass.data[LOVELACE_DOMAIN] = {
-        "resources": Mock(store=Mock(key="wrong_key", version=1))
-    }
+    # Test unexpected structure (wrong store key/version)
+    hass.data[LOVELACE_DOMAIN] = LovelaceData(
+        resource_mode="storage",
+        dashboards={},
+        resources=Mock(store=Mock(key="wrong_key", version=1)),
+        yaml_dashboards={},
+    )
     with pytest.raises(ResourcesUpdateError, match="Unexpected structure"):
         await ResourceRepositoryManager._get_resource_storage(hass)
 
