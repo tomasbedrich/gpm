@@ -8,23 +8,25 @@ GPM is a Home Assistant custom integration that provides a Git-based package man
 - This project requires Python 3.13+ for development but runs on Python 3.12+ in production.
 - The project is designed to run as a Home Assistant custom_component.
 - Development is done using the provided VSCode devcontainer or manually with Home Assistant development setup.
+- This project uses [uv](https://docs.astral.sh/uv/) for dependency management and builds.
 
 ### Quick Start (Limited Network Environment)
+- Install UV first: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Install only essential dependencies that work in constrained environments:
-  - `pip install ruff` - for linting and formatting (takes 5-10 seconds)
-  - `pip install pytest` - for basic testing framework (takes 10-15 seconds)
+  - `uv pip install ruff` - for linting and formatting (takes 5-10 seconds)
+  - `uv pip install pytest` - for basic testing framework (takes 10-15 seconds)
 - Basic code validation without dependencies:
   - `python3 -m py_compile custom_components/gpm/*.py` - validates Python syntax
-  - `python3 -m ruff check .` - lints code (takes <1 second)
-  - `python3 -m ruff format . --check` - checks formatting (takes <1 second)
+  - `uv run ruff check .` - lints code (takes <1 second)
+  - `uv run ruff format . --check` - checks formatting (takes <1 second)
   - `./scripts/lint.sh` - runs linting and formatting (takes <1 second)
 
 ### Full Development Setup (Normal Network Environment)
 - Run the setup script: `./scripts/setup.sh`
-  - This installs the project in editable mode: `python3 -m pip install -e .`
+  - This installs the project with UV: `uv sync --all-extras`
   - **WARNING**: Installation requires Home Assistant dependencies which may fail due to network/firewall limitations
   - **EXPECTED TIME**: 2-5 minutes if successful, will fail with network timeouts in restricted environments
-- **NEVER CANCEL** any pip install commands - they may take several minutes in slow network conditions
+- **NEVER CANCEL** any uv sync commands - they may take several minutes in slow network conditions
 
 ### Development Environment (VSCode DevContainer)
 - Use the provided `.devcontainer.json` for a complete development environment
@@ -40,12 +42,12 @@ GPM is a Home Assistant custom integration that provides a Git-based package man
 ### Linting (ALWAYS WORKS)
 - Run linting before any commit: `./scripts/lint.sh`
 - Individual commands:
-  - `python3 -m ruff format .` - auto-formats code (takes <1 second)
-  - `python3 -m ruff check . --fix` - fixes linting issues (takes <1 second)
-- **CRITICAL**: Always run `python3 -m ruff format . && python3 -m ruff check .` before committing or CI will fail
+  - `uv run ruff format .` - auto-formats code (takes <1 second)
+  - `uv run ruff check . --fix` - fixes linting issues (takes <1 second)
+- **CRITICAL**: Always run `uv run ruff format . && uv run ruff check .` before committing or CI will fail
 
 ### Testing (Requires Full Dependencies)
-- Run tests: `python3 -m pytest`
+- Run tests: `uv run pytest`
 - **WARNING**: Tests require Home Assistant dependencies which may not be installable in restricted environments
 - **EXPECTED TIME**: Tests take 5-10 seconds when dependencies are available
 - **NEVER CANCEL** test runs - wait for completion
@@ -93,9 +95,7 @@ pyproject.toml         # Python project configuration and dependencies
 - **NEVER CANCEL** CI workflows - they include dependency installation which can be slow
 
 ### Dependencies
-- **Required for runtime**: GitPython~=3.1.43, Home Assistant>=2025.4.4
-- **Required for development**: ruff==0.12.12, pytest-homeassistant-custom-component==0.13.278
-- **Network issues**: pip install may fail due to firewall limitations or PyPI timeouts
+Read up-to-date dependencies in `pyproject.toml`.
 
 ## Common Tasks and Commands
 
@@ -106,7 +106,7 @@ pyproject.toml         # Python project configuration and dependencies
 4. Always run `./scripts/lint.sh` again before committing
 
 ### Working with Network Limitations
-- If `pip install` fails with network timeouts, you can still:
+- If `uv sync` fails with network timeouts, you can still:
   - Validate Python syntax with `python3 -m py_compile`
   - Use system-available tools for basic validation
   - Focus on code changes that don't require dependency installation
@@ -134,13 +134,13 @@ pyproject.toml         # Python project configuration and dependencies
 ```bash
 # Essential validation (always works)
 python3 -m py_compile custom_components/gpm/*.py
-python3 -m ruff check .
-python3 -m ruff format . --check
+uv run ruff check .
+uv run ruff format . --check
 ./scripts/lint.sh
 
 # Full development setup (may fail with network issues)
-./scripts/setup.sh
-python3 -m pytest
+./scripts/setup.sh  # or: uv sync --all-extras
+uv run pytest
 ./scripts/develop.sh
 
 # Manual installation for testing

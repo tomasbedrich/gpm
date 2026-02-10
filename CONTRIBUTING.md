@@ -19,6 +19,10 @@ Pull requests are the best way to propose changes to the codebase.
 4. Test you contribution.
 5. Issue that pull request!
 
+## Development Setup
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Install it first.
+
 ## Any contributions you make will be under the MIT Software License
 
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
@@ -44,7 +48,7 @@ People *love* thorough bug reports. I'm not even kidding.
 
 ## Use a Consistent Coding Style
 
-Use [black](https://github.com/ambv/black) to make sure the code follows the style.
+Use [ruff](https://docs.astral.sh/ruff/) to make sure the code follows the style. Run `./scripts/lint.sh` to format and lint your code.
 
 ## Test your code modification
 
