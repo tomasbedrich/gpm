@@ -1,8 +1,8 @@
 # The contents of this file is based on https://github.com/home-assistant/core/blob/dev/pyproject.toml
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name        = "gpm"
@@ -23,22 +23,25 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Home Automation",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.13.2"
 dependencies    = [
     "GitPython~=3.1.43",
-    "colorlog==6.10.1",
     "homeassistant>=2025.4.4",
-    "pip>=21.3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "colorlog==6.10.1",
     "ruff==0.14.14",
     "pytest-homeassistant-custom-component==0.13.308",
 ]
 
-[tool.pdm.build]
-includes = ["custom_components/gpm"]
+[tool.hatch.version]
+path = "custom_components/gpm/manifest.json"
+pattern = '"version"\s*:\s*"(?P<version>[^"]+)"'
 
-[tool.pdm.version]
-source = "call"
-getter = "scripts.get_version:get_version"
+[tool.hatch.build.targets.wheel]
+packages = ["custom_components/gpm"]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -192,8 +195,6 @@ ignore = [
 
     "TRY003", # Avoid specifying long messages outside the exception class
     "TRY400", # Use `logging.exception` instead of `logging.error`
-    # Ignored due to performance: https://github.com/charliermarsh/ruff/issues/2923
-    "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)`
 
     # May conflict with the formatter, https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
     "W191",
