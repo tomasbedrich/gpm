@@ -32,7 +32,7 @@ dependencies    = [
 [project.optional-dependencies]
 dev = [
     "colorlog==6.10.1",
-    "ruff==0.15.11",
+    "ruff==0.15.12",
     "pytest-homeassistant-custom-component==0.13.316",
 ]
 
