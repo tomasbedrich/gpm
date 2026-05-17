@@ -11,10 +11,12 @@ from custom_components.gpm._manager import (
     RepositoryType,
     ResourceRepositoryManager,
     UpdateStrategy,
+    ZipResourceRepositoryManager,
 )
 from custom_components.gpm.config_flow import GPMConfigFlow
 from custom_components.gpm.const import (
     CONF_DOWNLOAD_URL,
+    CONF_RESOURCE_PATH,
     CONF_UPDATE_STRATEGY,
     DOMAIN,
 )
@@ -308,3 +310,115 @@ async def test_get_resource_defaults_invalid_url(hass: HomeAssistant) -> None:
     user_input = {CONF_URL: "https://gitlab.com/foo/bar"}
     defaults = flow._get_resource_defaults(user_input)
     assert defaults == {}
+
+
+async def test_async_step_install_zip_resource(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test full config flow for a zip-based resource."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_URL: "https://github.com/user/awesome-card",
+            CONF_TYPE: RepositoryType.RESOURCE,
+        },
+    )
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "resource"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{ version }}/awesome-card.zip"
+        },
+    )
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "zip_resource"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_RESOURCE_PATH: "dist/awesome-card.js"},
+    )
+    await hass.async_block_till_done()
+    assert zip_resource_manager.clone.await_count == 1
+    assert zip_resource_manager.install.await_count == 1
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert result["data"] == {
+        CONF_URL: "https://github.com/user/awesome-card",
+        CONF_TYPE: RepositoryType.RESOURCE,
+        CONF_UPDATE_STRATEGY: UpdateStrategy.LATEST_TAG,
+        CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{ version }}/awesome-card.zip",
+        CONF_RESOURCE_PATH: "dist/awesome-card.js",
+    }
+    assert mock_setup_entry.call_count == 1
+
+
+async def test_async_step_zip_resource_invalid_path(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test invalid resource_path values are rejected."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_URL: "https://github.com/user/awesome-card",
+            CONF_TYPE: RepositoryType.RESOURCE,
+        },
+    )
+    await hass.async_block_till_done()
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{ version }}/awesome-card.zip"
+        },
+    )
+    await hass.async_block_till_done()
+    assert result["step_id"] == "zip_resource"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_RESOURCE_PATH: "../../../etc/passwd"},
+    )
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_RESOURCE_PATH: "invalid_resource_path"}
+    assert mock_setup_entry.call_count == 0
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_RESOURCE_PATH: "dist/awesome-card.js"},
+    )
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert mock_setup_entry.call_count == 1
+
+
+def test_get_zip_resource_defaults_with_zip_url(hass: HomeAssistant) -> None:
+    """Test _get_zip_resource_defaults suggests JS filename from zip URL."""
+    flow = GPMConfigFlow()
+    user_input = {
+        CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{version}}/awesome-card.zip"
+    }
+    defaults = flow._get_zip_resource_defaults(user_input)
+    assert defaults == {CONF_RESOURCE_PATH: "awesome-card.js"}
+
+
+def test_get_zip_resource_defaults_with_versioned_zip_url(hass: HomeAssistant) -> None:
+    """Test _get_zip_resource_defaults keeps template variables in zip filename."""
+    flow = GPMConfigFlow()
+    user_input = {
+        CONF_DOWNLOAD_URL: "https://github.com/user/card/releases/download/{{ version }}/card-{{ version }}.zip"
+    }
+    defaults = flow._get_zip_resource_defaults(user_input)
+    assert defaults == {CONF_RESOURCE_PATH: "card-{{ version }}.js"}

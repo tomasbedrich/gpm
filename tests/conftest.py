@@ -14,9 +14,11 @@ from custom_components.gpm._manager import (
     RepositoryType,
     ResourceRepositoryManager,
     UpdateStrategy,
+    ZipResourceRepositoryManager,
 )
 from custom_components.gpm.const import (
     CONF_DOWNLOAD_URL,
+    CONF_RESOURCE_PATH,
     CONF_UPDATE_STRATEGY,
     DOMAIN,
 )
@@ -27,7 +29,7 @@ from homeassistant.const import CONF_TYPE, CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from . import DEFAULT_VERSION, TESTING_VERSIONS
+from . import DEFAULT_VERSION, TESTING_VERSIONS, make_zip
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,6 +137,39 @@ async def resource_manager_fixture(
         await manager.remove()
 
 
+@pytest.fixture(name="zip_resource_manager")
+async def zip_resource_manager_fixture(
+    hass: HomeAssistant, repo: None, tmp_path: Path
+) -> AsyncGenerator[ZipResourceRepositoryManager]:
+    """Fixture for zip resource manager."""
+    assert await async_setup_component(hass, "lovelace", {})
+
+    def mock_async_download(_hass, _url, install_path: Path) -> None:
+        install_path.write_bytes(
+            make_zip(
+                {
+                    "dist/awesome-card.js": "// main card",
+                    "dist/chunk1.js": "// chunk",
+                }
+            )
+        )
+
+    manager = _testing_zip_resource_manager(hass, tmp_path)
+    with (
+        patch(
+            "custom_components.gpm.ZipResourceRepositoryManager",
+            autospec=True,
+            return_value=manager,
+        ),
+        patch(
+            "custom_components.gpm._manager.async_download",
+            side_effect=mock_async_download,
+        ),
+    ):
+        yield manager
+        await manager.remove()
+
+
 def _testing_integration_manager(
     hass: HomeAssistant, tmp_path: Path
 ) -> IntegrationRepositoryManager:
@@ -159,6 +194,22 @@ def _testing_resource_manager(
             CONF_URL: "https://github.com/user/awesome-card",
             CONF_UPDATE_STRATEGY: UpdateStrategy.LATEST_TAG,
             CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{ version }}/bundle.js",
+        },
+        tmp_path,
+    )
+
+
+def _testing_zip_resource_manager(
+    hass: HomeAssistant, tmp_path: Path
+) -> ZipResourceRepositoryManager:
+    return _testing_manager(
+        hass,
+        {
+            CONF_TYPE: RepositoryType.RESOURCE,
+            CONF_URL: "https://github.com/user/awesome-card",
+            CONF_UPDATE_STRATEGY: UpdateStrategy.LATEST_TAG,
+            CONF_DOWNLOAD_URL: "https://github.com/user/awesome-card/releases/download/{{ version }}/awesome-card.zip",
+            CONF_RESOURCE_PATH: "dist/awesome-card.js",
         },
         tmp_path,
     )
