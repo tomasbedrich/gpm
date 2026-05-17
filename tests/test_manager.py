@@ -22,6 +22,7 @@ from custom_components.gpm._manager import (
     ResourcesUpdateError,
     UpdateStrategy,
     VersionAlreadyInstalledError,
+    ZipResourceRepositoryManager,
     async_download,
     async_open,
 )
@@ -33,6 +34,8 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import (
 from homeassistant.components.lovelace import LovelaceData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
+
+from . import make_zip
 
 
 async def test_is_cloned(manager: RepositoryManager) -> None:
@@ -428,3 +431,171 @@ async def test_get_current_version_same_major_version_tags(
     # Order: v1.25.1 > v1.25.0 > v1.25.0-beta > v1.24.9 > v1.0.0
     current_version = await manager.get_current_version()
     assert current_version == "v1.25.1"
+
+
+# ---------------------------------------------------------------------------
+# ZipResourceRepositoryManager tests
+# ---------------------------------------------------------------------------
+
+
+async def test_zip_resource_install(
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test successful zip installation creates directory with extracted files."""
+    await zip_resource_manager.clone()
+    await zip_resource_manager.install()
+    assert await zip_resource_manager.is_installed() is True
+    install_path = await zip_resource_manager.get_install_path()
+    assert install_path.is_dir()
+    assert (install_path / "awesome-card.js").exists()
+    assert (install_path / "chunk1.js").exists()
+
+
+async def test_zip_resource_get_resource_url(
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test get_resource_url returns versioned directory URL with filename."""
+    await zip_resource_manager.clone()
+    resource_url = await zip_resource_manager.get_resource_url()
+    assert resource_url.startswith("/gpm/awesome-card_")
+    assert resource_url.endswith("/awesome-card.js")
+
+
+async def test_zip_resource_uninstall(
+    zip_resource_manager: ZipResourceRepositoryManager,
+    hass: HomeAssistant,
+) -> None:
+    """Test zip resource uninstall removes directory and Lovelace resource."""
+    await zip_resource_manager.clone()
+    await zip_resource_manager.install()
+    install_path = await zip_resource_manager.get_install_path()
+    assert install_path.is_dir()
+    await zip_resource_manager.uninstall()
+    assert not install_path.exists()
+
+
+async def test_zip_resource_update(
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test zip resource update removes old directory and creates a new one."""
+    await zip_resource_manager.clone()
+    await zip_resource_manager.install()
+    old_install_path = await zip_resource_manager.get_install_path()
+    assert old_install_path.is_dir()
+    await zip_resource_manager.update("v0.8.8")
+    new_install_path = await zip_resource_manager.get_install_path()
+    assert not old_install_path.exists()
+    assert new_install_path.is_dir()
+
+
+async def test_zip_resource_download_error(
+    zip_resource_manager: ZipResourceRepositoryManager,
+) -> None:
+    """Test that a download error raises ResourceInstallError and cleans up the temp file."""
+    await zip_resource_manager.clone()
+    install_path = await zip_resource_manager.get_install_path()
+    tmp_zip = install_path.parent / f"_tmp_{zip_resource_manager.slug}.zip"
+
+    async def _create_and_fail(hass, url, path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"partial")
+        raise OSError("simulated failure")
+
+    with (
+        patch(
+            "custom_components.gpm._manager.async_download",
+            side_effect=_create_and_fail,
+        ),
+        pytest.raises(ResourceInstallError),
+    ):
+        await zip_resource_manager._download_resource()
+
+    assert not tmp_zip.exists()
+
+
+async def test_extract_zip_dist_prefix(
+    zip_resource_manager: ZipResourceRepositoryManager,
+    tmp_path: Path,
+) -> None:
+    """Test extraction of files under a dist/ prefix."""
+    zip_path = tmp_path / "test.zip"
+    zip_path.write_bytes(
+        make_zip(
+            {
+                "dist/card.js": "// main",
+                "dist/chunk.js": "// chunk",
+                "README.md": "# readme",
+            }
+        )
+    )
+    install_dir = tmp_path / "install"
+    zip_resource_manager._extract_zip(zip_path, install_dir, "dist/card.js")
+    assert (install_dir / "card.js").read_text() == "// main"
+    assert (install_dir / "chunk.js").read_text() == "// chunk"
+    assert not (install_dir / "README.md").exists()
+
+
+async def test_extract_zip_toplevel(
+    zip_resource_manager: ZipResourceRepositoryManager,
+    tmp_path: Path,
+) -> None:
+    """Test extraction of top-level files when resource_path has no parent dir."""
+    zip_path = tmp_path / "test.zip"
+    zip_path.write_bytes(
+        make_zip(
+            {
+                "card.js": "// main",
+                "chunk.js": "// chunk",
+                "nested/other.js": "// nested - should be excluded",
+            }
+        )
+    )
+    install_dir = tmp_path / "install"
+    zip_resource_manager._extract_zip(zip_path, install_dir, "card.js")
+    assert (install_dir / "card.js").read_text() == "// main"
+    assert (install_dir / "chunk.js").read_text() == "// chunk"
+    assert not (install_dir / "nested").exists()
+
+
+async def test_extract_zip_custom_prefix(
+    zip_resource_manager: ZipResourceRepositoryManager,
+    tmp_path: Path,
+) -> None:
+    """Test extraction using a custom subdirectory prefix."""
+    zip_path = tmp_path / "test.zip"
+    zip_path.write_bytes(
+        make_zip(
+            {
+                "release/lovelace-card.js": "// main",
+                "release/helper.js": "// helper",
+                "dist/other.js": "// wrong dir - excluded",
+            }
+        )
+    )
+    install_dir = tmp_path / "install"
+    zip_resource_manager._extract_zip(zip_path, install_dir, "release/lovelace-card.js")
+    assert (install_dir / "lovelace-card.js").read_text() == "// main"
+    assert (install_dir / "helper.js").read_text() == "// helper"
+    assert not (install_dir / "other.js").exists()
+
+
+async def test_extract_zip_path_traversal(
+    zip_resource_manager: ZipResourceRepositoryManager,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that zip entries with path traversal sequences are skipped."""
+    zip_path = tmp_path / "test.zip"
+    zip_path.write_bytes(
+        make_zip(
+            {
+                "dist/card.js": "// main",
+                "dist/../../../etc/passwd": "evil",
+            }
+        )
+    )
+    install_dir = tmp_path / "install"
+    with caplog.at_level(logging.WARNING):
+        zip_resource_manager._extract_zip(zip_path, install_dir, "dist/card.js")
+    assert (install_dir / "card.js").exists()
+    assert "unsafe" in caplog.text
