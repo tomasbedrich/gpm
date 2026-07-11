@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from aiohttp import ClientError
 from custom_components.gpm import ResourceRepositoryManager
 from custom_components.gpm._manager import (
     LOVELACE_DOMAIN,
@@ -599,3 +600,65 @@ async def test_extract_zip_path_traversal(
         zip_resource_manager._extract_zip(zip_path, install_dir, "dist/card.js")
     assert (install_dir / "card.js").exists()
     assert "unsafe" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("repo_url", "expected"),
+    [
+        ("https://github.com/user/awesome-component", "user/awesome-component"),
+        ("https://github.com/user/awesome-component.git", "user/awesome-component"),
+        ("https://github.com/user/awesome-component/", "user/awesome-component"),
+        ("https://gitlab.com/user/awesome-component", None),
+        ("https://github.com/user", None),
+    ],
+)
+async def test_github_repo(
+    manager: RepositoryManager, repo_url: str, expected: str | None
+) -> None:
+    """Test github_repo parses the `owner/repo` slug from GitHub URLs only."""
+    manager.repo_url = repo_url
+    assert manager.github_repo == expected
+
+
+async def test_get_release_notes(
+    manager: RepositoryManager, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test get_release_notes fetches the changelog body from the GitHub release."""
+    aioclient_mock.get(
+        f"https://api.github.com/repos/{manager.github_repo}/releases/tags/v1.0.0",
+        json={"body": "## Changelog\n- fixed a bug"},
+    )
+    assert await manager.get_release_notes("v1.0.0") == "## Changelog\n- fixed a bug"
+
+
+async def test_get_release_notes_no_matching_release(
+    manager: RepositoryManager, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test get_release_notes returns None when no GitHub release exists for the tag."""
+    aioclient_mock.get(
+        f"https://api.github.com/repos/{manager.github_repo}/releases/tags/v9.9.9",
+        status=404,
+        json={"message": "Not Found"},
+    )
+    assert await manager.get_release_notes("v9.9.9") is None
+
+
+async def test_get_release_notes_non_github(manager: RepositoryManager) -> None:
+    """Test get_release_notes returns None for repos not hosted on GitHub."""
+    manager.repo_url = "https://gitlab.com/user/awesome-component"
+    assert await manager.get_release_notes("v1.0.0") is None
+
+
+async def test_get_release_notes_client_error(
+    manager: RepositoryManager,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test get_release_notes returns None when the GitHub API request fails."""
+    aioclient_mock.get(
+        f"https://api.github.com/repos/{manager.github_repo}/releases/tags/v1.0.0",
+        exc=ClientError,
+    )
+    with caplog.at_level(logging.WARNING):
+        assert await manager.get_release_notes("v1.0.0") is None
+    assert "Failed to fetch release notes" in caplog.text

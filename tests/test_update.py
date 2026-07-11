@@ -1,5 +1,7 @@
 """Tests for the GPM update entity."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from custom_components.gpm._manager import (
     IntegrationRepositoryManager,
@@ -10,6 +12,7 @@ from custom_components.gpm.const import GIT_SHORT_HASH_LEN
 from custom_components.gpm.update import GPMUpdateEntity, UpdateStrategy
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from homeassistant.components.update import UpdateEntityFeature
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -109,3 +112,43 @@ async def test_install_non_existing_version(manager: RepositoryManager) -> None:
     with pytest.raises(HomeAssistantError):
         await entity.async_install(version="non-existing", backup=False)
     assert manager.checkout.await_count == 1
+
+
+async def test_release_notes_feature_enabled_for_github_tag_repo(
+    manager: RepositoryManager,
+) -> None:
+    """Test RELEASE_NOTES is advertised for GitHub repos using tag-based strategies."""
+    entity = GPMUpdateEntity(manager)
+    assert UpdateEntityFeature.RELEASE_NOTES in entity.supported_features
+
+
+async def test_release_notes_feature_disabled_for_latest_commit(
+    manager: RepositoryManager,
+) -> None:
+    """Test RELEASE_NOTES is not advertised when using the LATEST_COMMIT strategy."""
+    manager.update_strategy = UpdateStrategy.LATEST_COMMIT
+    entity = GPMUpdateEntity(manager)
+    assert UpdateEntityFeature.RELEASE_NOTES not in entity.supported_features
+
+
+async def test_release_notes_feature_disabled_for_non_github(
+    manager: RepositoryManager,
+) -> None:
+    """Test RELEASE_NOTES is not advertised for repos not hosted on GitHub."""
+    manager.repo_url = "https://gitlab.com/user/awesome-component"
+    entity = GPMUpdateEntity(manager)
+    assert UpdateEntityFeature.RELEASE_NOTES not in entity.supported_features
+
+
+async def test_async_release_notes(manager: RepositoryManager) -> None:
+    """Test async_release_notes delegates to the manager for the latest version."""
+    await manager.clone()
+    await manager.checkout("v0.9.9")
+    await manager.install()
+    entity = GPMUpdateEntity(manager)
+    await entity.async_update()
+    with patch.object(
+        manager, "get_release_notes", AsyncMock(return_value="## Changelog")
+    ) as get_release_notes:
+        assert await entity.async_release_notes() == "## Changelog"
+    get_release_notes.assert_awaited_once_with(entity.latest_version)
