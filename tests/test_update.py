@@ -73,9 +73,22 @@ async def test_versions_substr(manager: RepositoryManager) -> None:
     assert len(entity.latest_version) == GIT_SHORT_HASH_LEN
 
 
-@pytest.mark.parametrize("version", ["v0.8.8", "v1.0.0", "v2.0.0beta2", None])
+@pytest.mark.parametrize(
+    ("version", "expected_checkout"),
+    [
+        ("v0.8.8", "v0.8.8"),
+        ("v1.0.0", "v1.0.0"),
+        ("v2.0.0beta2", "v2.0.0beta2"),
+        # Home Assistant omits the version when installing the latest one,
+        # e.g. when using the "Update all" button
+        (None, "v1.0.0"),
+    ],
+)
 async def test_install(
-    manager: RepositoryManager, version: str | None, request: pytest.FixtureRequest
+    manager: RepositoryManager,
+    version: str | None,
+    expected_checkout: str,
+    request: pytest.FixtureRequest,
 ) -> None:
     """Test update installation."""
     await manager.clone()
@@ -86,6 +99,7 @@ async def test_install(
     await entity.async_update()
     await entity.async_install(version=version, backup=False)
     assert manager.checkout.await_count == 1
+    assert manager.checkout.await_args.args == (expected_checkout,)
 
 
 async def test_install_same_version(manager: RepositoryManager) -> None:

@@ -122,6 +122,18 @@ async def test_checkout_error(manager: RepositoryManager) -> None:
         await manager.checkout("v2.0.0beta2")
 
 
+@pytest.mark.parametrize("ref", [None, ""])
+async def test_checkout_empty_ref(manager: RepositoryManager, ref: str | None) -> None:
+    """Test checkout of an empty reference raises instead of doing nothing.
+
+    GitPython prunes empty arguments, so `git checkout` would silently succeed
+    without changing the checked out version.
+    """
+    await manager.clone()
+    with pytest.raises(CheckoutError):
+        await manager.checkout(ref)
+
+
 @pytest.mark.parametrize(
     ("repo_url", "unique_id"),
     [
