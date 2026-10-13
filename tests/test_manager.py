@@ -316,6 +316,16 @@ async def test_update_strategy_unstable_tag(manager: RepositoryManager) -> None:
     assert await manager.get_current_version() == "v2.0.0beta2"
 
 
+async def test_get_latest_tag_ignores_bare_integer_tags(
+    manager: RepositoryManager,
+) -> None:
+    """Test legacy integer tags (e.g. "14") don't outrank dotted versions."""
+    await manager.clone()
+    repo = await manager._get_repo()
+    await manager.hass.async_add_executor_job(repo.create_tag, "14")
+    assert await manager._get_latest_tag() == "v1.0.0"
+
+
 async def test_update_strategy_commit(manager: RepositoryManager) -> None:
     """Test failed update installation."""
     manager.update_strategy = UpdateStrategy.LATEST_COMMIT

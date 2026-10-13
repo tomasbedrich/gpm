@@ -144,14 +144,17 @@ class RepositoryManager:
 
         Given the list of tags, determine the latest version according to the semantic versioning.
         Invalid versions are always ignored.
+        If any dotted version exists, bare integer tags (e.g. legacy "14") are ignored.
         If `only_stable` is True, alpha, beta, dev, and RC versions are ignored.
         If no semantically valid versions are found, return None.
         """
         repo = await self._get_repo()
         tags = await self.hass.async_add_executor_job(lambda: map(str, repo.tags))
-        versions: Iterable[AwesomeVersion] = filter(
-            lambda v: v.valid, map(AwesomeVersion, tags)
-        )
+        versions: Iterable[AwesomeVersion] = [
+            v for v in map(AwesomeVersion, tags) if v.valid
+        ]
+        if any("." in v.string for v in versions):
+            versions = [v for v in versions if "." in v.string]
         if only_stable:
             versions = filter(
                 lambda v: not (v.alpha or v.beta or v.dev or v.release_candidate),
