@@ -1,6 +1,6 @@
 {
     "name": "tomasbedrich/gpm",
-    "image": "mcr.microsoft.com/devcontainers/python:3.13",
+    "image": "mcr.microsoft.com/devcontainers/python:3.14",
     "postCreateCommand": "scripts/setup.sh",
     "forwardPorts": [
         8123

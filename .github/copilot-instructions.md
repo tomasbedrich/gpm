@@ -5,7 +5,7 @@ GPM is a Home Assistant custom integration that provides a Git-based package man
 ## Working Effectively
 
 ### Environment Setup
-- This project requires Python 3.13+ for development but runs on Python 3.12+ in production.
+- This project requires Python 3.14+.
 - The project is designed to run as a Home Assistant custom_component.
 - Development is done using the provided VSCode devcontainer or manually with Home Assistant development setup.
 - This project uses [uv](https://docs.astral.sh/uv/) for dependency management and builds.

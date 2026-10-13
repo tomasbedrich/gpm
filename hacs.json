@@ -1,6 +1,6 @@
 {
     "name": "GPM",
     "hide_default_branch": true,
-    "homeassistant": "2026.2.0",
+    "homeassistant": "2026.10.1",
     "render_readme": true
 }

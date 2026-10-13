@@ -98,7 +98,7 @@ class RepositoryManager:
         """Ensure that the GIT repo is cloned."""
 
         @functools.wraps(func)
-        async def wrapper(self: "RepositoryManager", *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(self: RepositoryManager, *args: Any, **kwargs: Any) -> Any:
             if not await self.is_cloned():
                 raise NotClonedError(self.working_dir)
             return await func(self, *args, **kwargs)
@@ -120,7 +120,7 @@ class RepositoryManager:
         """Ensure that the GIT repo is installed as a package."""
 
         @functools.wraps(func)
-        async def wrapper(self: "RepositoryManager", *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(self: RepositoryManager, *args: Any, **kwargs: Any) -> Any:
             if not await self.is_installed():
                 raise NotInstalledError(self.slug)
             return await func(self, *args, **kwargs)
@@ -199,7 +199,7 @@ class RepositoryManager:
                         version = AwesomeVersion(tag_str)
                         if version.valid:
                             semantic_tags.append((version, tag_str))
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         # Tag is not a valid semantic version, skip it
                         pass
 
