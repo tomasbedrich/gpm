@@ -282,6 +282,19 @@ async def test_remove_resource_removed_in_meantime(
         assert re.search(r"Resource .* not found", caplog.text), "Warning is expected"
 
 
+async def test_remove_resource_file_missing(
+    resource_manager: ResourceRepositoryManager,
+    hass: HomeAssistant,
+) -> None:
+    """Test remove deletes the resource even if the installed file is missing."""
+    await resource_manager.clone()
+    await resource_manager.install()
+    (await resource_manager.get_install_path()).unlink()
+    await resource_manager.remove()
+    lovelace_resources = await ResourceRepositoryManager._get_resource_storage(hass)
+    assert lovelace_resources.async_items() == []
+
+
 async def _remove_all_resources(hass: HomeAssistant) -> None:
     """Simulate that user manually removes all Lovelace resources."""
     lovelace_resources = await ResourceRepositoryManager._get_resource_storage(hass)

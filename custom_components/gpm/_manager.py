@@ -537,6 +537,12 @@ class ResourceRepositoryManager(RepositoryManager):
         await self.hass.async_add_executor_job(install_path.unlink)
         await self._refresh_frontend()
 
+    async def remove(self) -> None:
+        """Remove the GIT repo, including a dangling Lovelace resource."""
+        if await self.is_cloned() and not await self.is_installed():
+            await self._remove_resource(await self.get_resource_url())
+        await super().remove()
+
     @RepositoryManager.ensure_installed
     async def update(self, version: str):
         """Update / downgrade the installed resource."""
