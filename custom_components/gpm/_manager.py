@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from aiohttp import ClientError
-from awesomeversion import AwesomeVersion
+from awesomeversion import AwesomeVersion, AwesomeVersionStrategy
 from git import GitCommandError, Remote, Repo
 from homeassistant.components.lovelace.const import (  # pylint: disable=hass-component-root-import
     DOMAIN as LOVELACE_DOMAIN,
@@ -42,6 +42,7 @@ from .const import (
     URL_BASE,
 )
 
+_SEMVER_LIKE = (AwesomeVersionStrategy.SEMVER, AwesomeVersionStrategy.PEP440)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -144,7 +145,8 @@ class RepositoryManager:
 
         Given the list of tags, determine the latest version according to the semantic versioning.
         Invalid versions are always ignored.
-        If any dotted version exists, bare integer tags (e.g. legacy "14") are ignored.
+        If any SemVer tag exists, only SemVer and PEP 440 tags are considered,
+        so legacy tags (e.g. "14" or "14.1") are ignored.
         If `only_stable` is True, alpha, beta, dev, and RC versions are ignored.
         If no semantically valid versions are found, return None.
         """
@@ -153,8 +155,8 @@ class RepositoryManager:
         versions: Iterable[AwesomeVersion] = [
             v for v in map(AwesomeVersion, tags) if v.valid
         ]
-        if any("." in v.string for v in versions):
-            versions = [v for v in versions if "." in v.string]
+        if any(v.strategy == AwesomeVersionStrategy.SEMVER for v in versions):
+            versions = [v for v in versions if v.strategy in _SEMVER_LIKE]
         if only_stable:
             versions = filter(
                 lambda v: not (v.alpha or v.beta or v.dev or v.release_candidate),
