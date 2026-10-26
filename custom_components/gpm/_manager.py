@@ -145,23 +145,28 @@ class RepositoryManager:
 
         Given the list of tags, determine the latest version according to the semantic versioning.
         Invalid versions are always ignored.
-        If any SemVer tag exists, only SemVer and PEP 440 tags are considered,
-        so legacy tags (e.g. "14" or "14.1") are ignored.
+        If any stable SemVer tag exists, only SemVer and PEP 440 tags are considered,
+        so legacy tags (e.g. "14" or "14.1") are ignored. A lone SemVer pre-release
+        (e.g. "2022.7.0-beta" among CalVer tags) doesn't trigger this.
         If `only_stable` is True, alpha, beta, dev, and RC versions are ignored.
         If no semantically valid versions are found, return None.
         """
+
+        def is_stable(v: AwesomeVersion) -> bool:
+            return not (v.alpha or v.beta or v.dev or v.release_candidate)
+
         repo = await self._get_repo()
         tags = await self.hass.async_add_executor_job(lambda: map(str, repo.tags))
         versions: Iterable[AwesomeVersion] = [
             v for v in map(AwesomeVersion, tags) if v.valid
         ]
-        if any(v.strategy == AwesomeVersionStrategy.SEMVER for v in versions):
+        if any(
+            v.strategy == AwesomeVersionStrategy.SEMVER and is_stable(v)
+            for v in versions
+        ):
             versions = [v for v in versions if v.strategy in _SEMVER_LIKE]
         if only_stable:
-            versions = filter(
-                lambda v: not (v.alpha or v.beta or v.dev or v.release_candidate),
-                versions,
-            )
+            versions = filter(is_stable, versions)
         versions = sorted(versions, reverse=True)
         return str(versions[0]) if versions else None  # type: ignore[truthy-iterable]
 

@@ -327,6 +327,23 @@ async def test_get_latest_tag_ignores_non_semver_tags(
     assert await manager._get_latest_tag() == "v1.0.0"
 
 
+async def test_get_latest_tag_calver_with_semver_prerelease(
+    manager: RepositoryManager,
+) -> None:
+    """Test a lone SemVer pre-release doesn't hide CalVer tags."""
+    await manager.clone()
+    repo = await manager._get_repo()
+
+    def retag() -> None:
+        repo.delete_tag(*repo.tags)
+        for tag in ("2022.7.0-beta", "2024.12.0", "2026.10.0", "keep-http-api"):
+            repo.create_tag(tag)
+
+    await manager.hass.async_add_executor_job(retag)
+    assert await manager._get_latest_tag() == "2026.10.0"
+    assert await manager._get_latest_tag(only_stable=False) == "2026.10.0"
+
+
 async def test_update_strategy_commit(manager: RepositoryManager) -> None:
     """Test failed update installation."""
     manager.update_strategy = UpdateStrategy.LATEST_COMMIT
