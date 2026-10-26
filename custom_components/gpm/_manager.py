@@ -171,10 +171,10 @@ class RepositoryManager:
         return str(versions[0]) if versions else None  # type: ignore[truthy-iterable]
 
     async def _get_latest_commit(self) -> str:
-        """Return the latest commit hash."""
-        repo = await self._get_repo()
+        """Return the latest commit hash of the remote's default branch."""
+        remote = await self._get_remote()
         return await self.hass.async_add_executor_job(
-            lambda: repo.heads[0].commit.hexsha
+            lambda: remote.refs.HEAD.commit.hexsha
         )
 
     @ensure_cloned

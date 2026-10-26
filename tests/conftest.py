@@ -65,6 +65,7 @@ def repo() -> Generator[None]:
         for tag in TESTING_VERSIONS:
             repo.index.commit(f"New version: {tag}")
             repo.create_tag(tag)
+        remote_mock.refs.HEAD.commit = repo.head.commit
         repo.git.checkout(DEFAULT_VERSION)
         return repo
 

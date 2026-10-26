@@ -351,6 +351,19 @@ async def test_update_strategy_commit(manager: RepositoryManager) -> None:
     assert len(await manager.get_current_version()) == 40
 
 
+async def test_get_latest_commit_uses_remote_head(
+    manager: RepositoryManager,
+) -> None:
+    """Test the latest commit follows the fetched remote, not the local branch."""
+    await manager.clone()
+    repo = await manager._get_repo()
+    remote = await manager._get_remote()
+    remote.refs.HEAD.commit = await manager.hass.async_add_executor_job(
+        repo.index.commit, "Upstream commit"
+    )
+    assert await manager._get_latest_commit() == remote.refs.HEAD.commit.hexsha
+
+
 def test_not_cloned_error_str() -> None:
     """Test NotClonedError."""
     err_str = str(NotClonedError("working_dir"))
