@@ -1,0 +1,28 @@
+name: "Auto-release"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  "0 6 * * *"
+
+permissions: {}
+
+jobs:
+  release:
+    name: "Release"
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v7"
+        with:
+          fetch-depth: 0
+
+      - name: "Release if anything changed for users"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/release.sh

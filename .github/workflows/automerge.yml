@@ -1,0 +1,42 @@
+name: "Auto-merge"
+
+# Runs after each CI workflow of a PR finishes; the last one to finish merges the PR once all checks are green.
+on:
+  workflow_run:
+    workflows: ["Lint", "Test", "Validate"]
+    types:
+      - "completed"
+
+permissions: {}
+
+jobs:
+  automerge:
+    name: "Merge non-major Dependabot bumps"
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: "Merge"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          [ -n "$PR" ] || exit 0
+          [ "$(gh pr view "$PR" --json author --jq .author.login)" = "app/dependabot" ] || exit 0
+
+          title=$(gh pr view "$PR" --json title --jq .title)
+          if ! [[ $title =~ from\ [^0-9]*([0-9]+)[^\ ]*\ to\ [^0-9]*([0-9]+) ]] || [ "${BASH_REMATCH[1]}" != "${BASH_REMATCH[2]}" ]; then
+            echo "Not merging a major or unrecognized bump: $title"
+            exit 0
+          fi
+
+          if ! gh pr checks "$PR"; then
+            echo "Not all checks passed yet"
+            exit 0
+          fi
+
+          gh pr merge "$PR" --squash --match-head-commit "$HEAD_SHA"
