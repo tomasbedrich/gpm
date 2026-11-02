@@ -1,0 +1,47 @@
+name: "Auto-release"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  "0 6 * * *"
+
+permissions: {}
+
+jobs:
+  release:
+    name: "Release"
+    if: github.ref == 'refs/heads/main'
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v7"
+        with:
+          fetch-depth: 0
+
+      # Commits made with GITHUB_TOKEN don't trigger CI, so main has to be checked here
+      - name: "Install uv"
+        uses: "astral-sh/setup-uv@v7"
+        with:
+          enable-cache: true
+
+      - name: "Set up Python"
+        run: uv python install 3.14
+
+      - name: "Install dependencies"
+        run: uv sync --locked --all-extras
+
+      - name: "Run pytest"
+        run: uv run pytest
+
+      - name: "Run hassfest validation"
+        uses: "home-assistant/actions/hassfest@master"
+
+      - name: "Release if anything changed for users"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/release.sh
