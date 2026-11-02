@@ -64,5 +64,5 @@ git commit -m "Bump version" -- "$manifest"
 git tag "$new"
 git push --atomic origin HEAD:main "refs/tags/$new"
 
-(cd custom_components/gpm && zip -r "$OLDPWD/gpm.zip" ./)
+git archive --format=zip -o gpm.zip HEAD:custom_components/gpm
 gh release create "$new" gpm.zip --title "$new" --notes "$notes"
