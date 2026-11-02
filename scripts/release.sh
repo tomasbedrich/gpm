@@ -8,6 +8,18 @@ cd "$(dirname "$0")/.."
 manifest=custom_components/gpm/manifest.json
 last=$(git describe --tags --abbrev=0)
 
+if ! gh release view "$last" > /dev/null 2>&1; then
+    echo "Tag $last has no release, creating it"
+    git archive --format=zip -o gpm.zip "$last:custom_components/gpm"
+    gh release create "$last" gpm.zip --title "$last" --generate-notes
+    exit 0
+fi
+
+if [ "$(jq -r .version "$manifest")" != "$last" ]; then
+    echo "Manifest version differs from $last, leaving this release to be done manually"
+    exit 0
+fi
+
 # Pin everything HA installs for users to what we tested with
 changed=$(python3 - "$manifest" <<'PY'
 import json, re, sys, tomllib
@@ -20,6 +32,8 @@ changed = []
 for i, requirement in enumerate(manifest["requirements"]):
     name_with_extras = re.match(r"[^~=<>!;\s]+", requirement)[0]
     name = re.sub(r"[-_.]+", "-", name_with_extras.split("[")[0]).lower()
+    if "." not in locked[name]:
+        sys.exit(f"Cannot use ~= with single-segment version of {name}: {locked[name]}")
     pinned = f"{name_with_extras}~={locked[name]}"
     if pinned != requirement:
         manifest["requirements"][i] = pinned

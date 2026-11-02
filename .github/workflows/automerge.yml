@@ -15,8 +15,11 @@ jobs:
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: "ubuntu-latest"
     permissions:
+      actions: read
+      checks: read
       contents: write
       pull-requests: write
+      statuses: read
     steps:
       - name: "Merge"
         env:
@@ -34,8 +37,10 @@ jobs:
             exit 0
           fi
 
-          if ! gh pr checks "$PR"; then
-            echo "Not all checks passed yet"
+          # Compare with the exact set: cancelled, skipped and not yet registered checks must not count as passed
+          passed=$(gh pr checks "$PR" --json name,bucket --jq '[.[] | select(.bucket == "pass").name] | sort | join(",")')
+          if [ "$passed" != "HACS Validation,Hassfest Validation,Ruff,build (3.14)" ]; then
+            echo "Not all checks passed yet: $passed"
             exit 0
           fi
 
