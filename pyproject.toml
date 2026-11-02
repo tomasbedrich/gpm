@@ -33,7 +33,7 @@ dependencies    = [
 dev = [
     "colorlog==6.12.0",
     "ruff==0.17.3",
-    "pytest-homeassistant-custom-component==0.13.373",
+    "pytest-homeassistant-custom-component==0.13.375",
 ]
 
 [tool.hatch.version]
